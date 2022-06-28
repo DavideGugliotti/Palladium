@@ -7,6 +7,10 @@ open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
+open OpenTelemetry.Exporter
+open OpenTelemetry.Metrics
+open OpenTelemetry.Resources
+open OpenTelemetry.Trace
 open Orleans.Configuration
 open Orleans.Hosting
 open Orleans.Statistics
@@ -34,21 +38,23 @@ let main args =
             let smokeTestsApiPort = results.[4]
             
             let stringTasks = [Ports.clusterName ()
-                               Ports.serviceName ()]
+                               Ports.serviceName ()
+                               Ports.prometheusHostAddress()]
             
             let! stringResults = stringTasks |> Async.Parallel
             
             let clusterName = stringResults.[0]
             let serviceName = stringResults.[1]
+            let prometheusAddress = stringResults.[2]
 
-            return siloPort, gatewayPort, primarySiloPort, dashboardPort, smokeTestsApiPort, clusterName, serviceName
+            return siloPort, gatewayPort, primarySiloPort, dashboardPort, smokeTestsApiPort, clusterName, serviceName, prometheusAddress
         }
 
     let ipAddress =
         IpAddresses.advertisedIpAddress ()
         |> Async.RunSynchronously
 
-    let siloPort, gatewayPort, primarySiloPort, dashboardPort, testsApiPort, clusterName, serviceName = portsAsync |> Async.RunSynchronously
+    let siloPort, gatewayPort, primarySiloPort, dashboardPort, testsApiPort, clusterName, serviceName, prometheusAddress = portsAsync |> Async.RunSynchronously
     printfn $"Cluster Name: {clusterName}"
     printfn $"Service Name: {serviceName}"
     printfn $"IP Address: {ipAddress.ToString()}"
@@ -67,8 +73,28 @@ let main args =
     let builder = HostBuilder()
     let configureServices = 
         builder.ConfigureServices(fun (services : IServiceCollection) ->
-                services.AddSingleton<TestClassFixture>()
-                |> ignore
+                services.AddSingleton<TestWebClientFixture>() |> ignore
+                services.AddSingleton<TestCpuFixture>() |> ignore
+                services.AddSingleton<TestIoFixture>() |> ignore
+                services.AddSingleton<TestClassFixture>() |> ignore
+                services.AddSingleton<ActivityTracer>() |> ignore
+                services.AddOpenTelemetryTracing(fun (tracerBuilder : TracerProviderBuilder) ->
+                    tracerBuilder.AddConsoleExporter(fun (config : ConsoleExporterOptions) ->
+                            config.Targets <- ConsoleExporterOutputTargets.Console
+                        ) |> ignore
+                    tracerBuilder.AddSource("test_tracer") |> ignore
+                    tracerBuilder.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("SiloHost")) |> ignore
+                    ) |> ignore
+                services.AddOpenTelemetryMetrics(fun (meterBuilder : MeterProviderBuilder) ->
+                    meterBuilder.AddPrometheusExporter(fun (options : PrometheusExporterOptions) ->
+                        options.StartHttpListener <- true
+                        options.HttpListenerPrefixes <- [prometheusAddress]
+                        options.ScrapeResponseCacheDurationMilliseconds <- 0
+                        ) |> ignore
+                    meterBuilder.AddMeter("web_test_execution_meter") |> ignore
+                    meterBuilder.AddMeter("cpu_test_execution_meter") |> ignore
+                    meterBuilder.AddMeter("io_test_execution_meter") |> ignore
+                    ) |> ignore
             )
 
     let siloConfiguration =
@@ -87,6 +113,8 @@ let main args =
                     options.GatewayPort <- gatewayPort
                     options.SiloListeningEndpoint <- IPEndPoint(IPAddress.Any, siloPort)
                     options.GatewayListeningEndpoint <- IPEndPoint(IPAddress.Any, gatewayPort))
+                .Configure<MessagingOptions>(fun (options: MessagingOptions) ->
+                    options.ResponseTimeout <- TimeSpan.FromSeconds(90))
                 .UseDashboard(fun (options: DashboardOptions) ->
                     options.Username <- "piotr"
                     options.Password <- "orleans"

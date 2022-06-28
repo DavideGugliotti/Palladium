@@ -22,7 +22,9 @@ public class OrleansTestFramework : XunitTestFramework
     protected override ITestFrameworkExecutor CreateExecutor(AssemblyName assemblyName)
     {
         GetGrainsAssemblyMetadata(assemblyName);
-        _siloBashProcess = StartSilo();
+        
+        if(!OrleansTestEnvironmentVariables.UseRemoteCluster)
+            _siloBashProcess = StartSilo();
         
         return new OrleansTestExecutor(
             assemblyName, 
@@ -46,7 +48,6 @@ public class OrleansTestFramework : XunitTestFramework
     
     private Process? GetHostProcess()
     {
-        //Assumption is the process runs with the name of the assembly/exe
         var processName = Path.GetFileNameWithoutExtension(OrleansTestEnvironmentVariables.SiloHostProjectPath);
         var hostProcess = Process.GetProcessesByName(processName);
             
@@ -129,9 +130,17 @@ public class OrleansTestFramework : XunitTestFramework
                 _clusterClient,
                 _orleansAssemblyMetadata);
             
-            await orleansRunner.RunAsync();
+            try
+            {
+                await orleansRunner.RunAsync();
+            }
+            catch (Exception)
+            {
+                if(!OrleansTestEnvironmentVariables.UseRemoteCluster)
+                    StopSilo();
+            }
             
-            if(_orleansAssemblyMetadata.StopOrleansClusterAfterTestExecution)
+            if(_orleansAssemblyMetadata.StopOrleansClusterAfterTestExecution && !OrleansTestEnvironmentVariables.UseRemoteCluster)
                 StopSilo();
         }
         
@@ -142,24 +151,41 @@ public class OrleansTestFramework : XunitTestFramework
                 {
                     options.ClusterId = OrleansTestEnvironmentVariables.ClusterName;
                     options.ServiceId = OrleansTestEnvironmentVariables.ServiceName;
-                })
-                .UseLocalhostClustering(
-                    OrleansTestEnvironmentVariables.GatewayPort, 
-                    OrleansTestEnvironmentVariables.ServiceName,
-                    OrleansTestEnvironmentVariables.ClusterName)
-                .ConfigureApplicationParts(manager =>
-                    manager.AddApplicationPart(_grainsAssembly)
-                        .WithReferences()
-                        .WithCodeGeneration()
-                    )
-                .Build();
+                });
 
-            return client;
+            if (OrleansTestEnvironmentVariables.UseRemoteCluster)
+            {
+                client
+                    .UseDynamoDBClustering(dynamoDbGatewayOption =>
+                    {
+                        dynamoDbGatewayOption.Service = OrleansTestEnvironmentVariables.AwsRegion;
+                        dynamoDbGatewayOption.TableName = OrleansTestEnvironmentVariables.MembershipTableName;
+                    });
+            }
+            else
+            {
+                client
+                    .Configure<MessagingOptions>(options =>
+                    {
+                        options.ResponseTimeout = TimeSpan.FromSeconds(90);
+                    })
+                    .UseLocalhostClustering(
+                        OrleansTestEnvironmentVariables.GatewayPort,
+                        OrleansTestEnvironmentVariables.ServiceName,
+                        OrleansTestEnvironmentVariables.ClusterName)
+                    .ConfigureApplicationParts(manager =>
+                        manager.AddApplicationPart(_grainsAssembly)
+                            .WithReferences()
+                            .WithCodeGeneration()
+                    );
+            }
+                
+
+            return client.Build();
         }
 
         private void StopSilo()
         {
-            //Assumption is the process runs with the name of the assembly/exe
             var processName = Path.GetFileNameWithoutExtension(OrleansTestEnvironmentVariables.SiloHostProjectPath);
             var hostProcessesByName = Process.GetProcessesByName(processName);
 

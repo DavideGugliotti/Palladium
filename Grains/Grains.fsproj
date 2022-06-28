@@ -7,6 +7,19 @@
 
     <ItemGroup>
         <Compile Include="src\AsynchronousTests.fs" />
+        <Compile Include="src\DemoWebTests.fs" />
+        <Compile Include="src\DemoWebTests2.fs" />
+        <Compile Include="src\DemoWebTests3.fs" />
+        <Compile Include="src\DemoCpuTests.fs" />
+        <Compile Include="src\DemoCpuTests2.fs" />
+        <Compile Include="src\DemoCpuTests3.fs" />
+        <Compile Include="src\DemoCpuTests4.fs" />
+        <Compile Include="src\DemoCpuTests5.fs" />
+        <Compile Include="src\DemoIOTests.fs" />
+        <Compile Include="src\DemoIOTests2.fs" />
+        <Compile Include="src\DemoIOTests3.fs" />
+        <Compile Include="src\DemoIOTests4.fs" />
+        <Compile Include="src\DemoIOTests5.fs" />
         <Content Include="xunit.runner.json">
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
