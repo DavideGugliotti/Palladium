@@ -9,6 +9,9 @@ public static class OrleansTestEnvironmentVariables
     public static string ClusterName => Environment.GetEnvironmentVariable("CLUSTERNAME") ?? "test-cluster";
     
     public static string ServiceName => Environment.GetEnvironmentVariable("SERVICENAME") ?? "test-service";
+
+    public static bool UseRemoteCluster => bool.TryParse(Environment.GetEnvironmentVariable("USEREMOTECLUSTER"),
+        out var useRemoteCluster) && useRemoteCluster;
     
     public static string SiloHostProjectPath
     {
@@ -20,6 +23,32 @@ public static class OrleansTestEnvironmentVariables
             return Environment.GetEnvironmentVariable("SILOHOSTPROJECTPATH") ?? defaultSiloHostPath;
         }
     }
+
+    public static string AwsRegion
+    {
+        get
+        {
+            var region = Environment.GetEnvironmentVariable("AWSREGION");
+
+            if (UseRemoteCluster && string.IsNullOrWhiteSpace(region))
+                throw new Exception($"Cannot connect to remote cluster: {nameof(AwsRegion)} missing");
+            
+            return region!;
+        }
+    }
+    public static string MembershipTableName
+    {
+        get
+        {
+            var table = Environment.GetEnvironmentVariable("MEMBERSHIPTABLENAME");
+
+            if (UseRemoteCluster && string.IsNullOrWhiteSpace(table))
+                throw new Exception($"Cannot connect to remote cluster: {nameof(MembershipTableName)} missing");
+            
+            return table!;
+        }
+    }
+    
 
     public static int TestApiPort => 
         !int.TryParse(Environment.GetEnvironmentVariable("TESTSAPIPORT"), out var apiPort) 

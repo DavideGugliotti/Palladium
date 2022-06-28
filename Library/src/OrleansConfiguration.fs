@@ -30,6 +30,10 @@ module Ports =
     
     let clusterName () : Async<string> = async { return Environment.GetEnvironmentVariable("CLUSTERNAME") }
     let serviceName () : Async<string> = async { return Environment.GetEnvironmentVariable("SERVICENAME") }
+    let prometheusHostAddress () : Async<string> = async {
+        let prom = Environment.GetEnvironmentVariable("PROMETHEUSHOST")
+        return if String.IsNullOrEmpty(prom) then "http://localhost:9464/" else prom
+    }
 
 module IpAddresses =
     let localIpAddress () : Async<IPAddress> =

@@ -10,6 +10,19 @@
         <Compile Include="src\Helpers.fs" />
         <Compile Include="src\OrleansConfiguration.fs" />
         <Compile Include="src\TestInterfaces\IAsynchronousTests.fs" />
+        <Compile Include="src\TestInterfaces\IDemoCpuTests.fs" />
+        <Compile Include="src\TestInterfaces\IDemoCpuTests2.fs" />
+        <Compile Include="src\TestInterfaces\IDemoCpuTests3.fs" />
+        <Compile Include="src\TestInterfaces\IDemoCpuTests4.fs" />
+        <Compile Include="src\TestInterfaces\IDemoCpuTests5.fs" />
+        <Compile Include="src\TestInterfaces\IDemoIOTests.fs" />
+        <Compile Include="src\TestInterfaces\IDemoIOTests2.fs" />
+        <Compile Include="src\TestInterfaces\IDemoIOTests3.fs" />
+        <Compile Include="src\TestInterfaces\IDemoIOTests4.fs" />
+        <Compile Include="src\TestInterfaces\IDemoIOTests5.fs" />
+        <Compile Include="src\TestInterfaces\IDemoWebTests2.fs" />
+        <Compile Include="src\TestInterfaces\IDemoWebTests3.fs" />
+        <Compile Include="src\TestInterfaces\IDemoWebTests.fs" />
     </ItemGroup>
 
     <ItemGroup>

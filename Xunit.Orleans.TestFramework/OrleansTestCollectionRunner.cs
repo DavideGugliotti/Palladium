@@ -39,6 +39,7 @@ public class OrleansTestCollectionRunner : TestCollectionRunner<IXunitTestCase>
         IReflectionTypeInfo @class, 
         IEnumerable<IXunitTestCase> xunitTestCases)
     {
+        
         var collectionResults = new List<(bool, decimal)>();
         var testCases = xunitTestCases.ToList();
         
@@ -68,7 +69,7 @@ public class OrleansTestCollectionRunner : TestCollectionRunner<IXunitTestCase>
         //execute the collection's methods in parallel
         await Task.WhenAll(testExecutionCollection);
         collectionStopWatch.Stop();
-        
+
         var collectionExecutionTime = (decimal)collectionStopWatch.ElapsedMilliseconds / 1000;
         var collectionFailedTests = collectionResults.Count(r => r.Item1 == false);
         var collectionSkippedTests = testCases.Count(c => !string.IsNullOrEmpty(c.SkipReason));
